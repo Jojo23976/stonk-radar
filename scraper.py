@@ -94,7 +94,8 @@ IGNORE_WORDS = {
     'ELI', 'EDIT', 'UPDATE', 'EDIT2', 'EDIT3', 'OP',
 }
 
-DB_PATH = 'sentiment.db'
+import os
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sentiment.db')
 
 
 def init_db():
