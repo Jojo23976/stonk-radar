@@ -3,14 +3,14 @@ import threading
 import time
 import logging
 from flask import Flask, render_template, jsonify
-from scraper import init_db, scrape_all, get_trending, get_last_scraped
+from scraper import init_db, scrape_all, get_trending, get_last_scraped, get_post_details
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-SCRAPE_INTERVAL = 3600
+SCRAPE_INTERVAL = 3600  # 1 hour
 
 
 def background_worker():
@@ -38,11 +38,18 @@ def api_trending():
     })
 
 
+@app.route('/api/details/<ticker>')
+def api_details(ticker):
+    posts = get_post_details(ticker)
+    return jsonify({'ticker': ticker.upper(), 'posts': posts})
+
+
 @app.route('/api/health')
 def health():
     return jsonify({'status': 'ok'})
 
 
+# Initialize on import so gunicorn picks it up too
 init_db()
 t = threading.Thread(target=background_worker, daemon=True)
 t.start()
