@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-SCRAPE_INTERVAL = 3600  # 1 hour
+SCRAPE_INTERVAL = 3600
 
 
 def background_worker():
@@ -43,7 +43,6 @@ def health():
     return jsonify({'status': 'ok'})
 
 
-# Initialize on import so gunicorn picks it up too
 init_db()
 t = threading.Thread(target=background_worker, daemon=True)
 t.start()
