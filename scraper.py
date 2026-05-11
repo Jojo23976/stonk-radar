@@ -205,6 +205,7 @@ def scrape_all():
 
 
 def get_trending(limit=30):
+    init_db()
     conn = sqlite3.connect(DB_PATH)
     now = datetime.utcnow()
     cutoff_24h = (now - timedelta(hours=24)).strftime('%Y-%m-%d %H:%M:%S')
