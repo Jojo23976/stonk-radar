@@ -2,9 +2,10 @@ import requests
 import re
 import sqlite3
 import time
+import os
 import logging
 from datetime import datetime, timedelta
-from collections import Counter
+from collections import Counter, defaultdict
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 logger = logging.getLogger(__name__)
@@ -74,7 +75,6 @@ CRYPTO_NAMES = {
     'immutable': 'IMX', 'aptos': 'APT', 'sui': 'SUI',
 }
 
-# Tickers that are too ambiguous without the $ prefix
 AMBIGUOUS_TICKERS = {
     'A', 'B', 'C', 'D', 'F', 'I', 'K', 'O', 'R', 'T', 'U', 'V', 'X', 'Y',
     'IT', 'IS', 'OR', 'NO', 'ON', 'AT', 'IN', 'TO', 'BY', 'WE', 'ME',
@@ -94,7 +94,6 @@ IGNORE_WORDS = {
     'ELI', 'EDIT', 'UPDATE', 'EDIT2', 'EDIT3', 'OP',
 }
 
-import os
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sentiment.db')
 
 
@@ -110,7 +109,19 @@ def init_db():
             scraped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS top_posts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticker TEXT NOT NULL,
+            title TEXT NOT NULL,
+            subreddit TEXT NOT NULL,
+            score INTEGER NOT NULL,
+            url TEXT NOT NULL,
+            scraped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
     conn.execute('CREATE INDEX IF NOT EXISTS idx_ticker_time ON mentions(ticker, scraped_at)')
+    conn.execute('CREATE INDEX IF NOT EXISTS idx_posts_ticker ON top_posts(ticker, scraped_at)')
     conn.commit()
     conn.close()
 
@@ -120,7 +131,6 @@ def extract_mentions(text):
     if not text:
         return mentions
 
-    # $TICKER pattern (explicit, highest confidence)
     dollar_matches = re.findall(r'\$([A-Za-z]{1,6})\b', text)
     for match in dollar_matches:
         ticker = match.upper()
@@ -129,7 +139,6 @@ def extract_mentions(text):
         elif ticker in CRYPTO_ASSETS:
             mentions[('crypto', ticker)] += 3
 
-    # Plain uppercase tickers (only from known lists, filtered)
     words = re.findall(r'\b([A-Z]{2,6})\b', text)
     for word in words:
         if word in IGNORE_WORDS:
@@ -141,7 +150,6 @@ def extract_mentions(text):
         elif word in CRYPTO_ASSETS:
             mentions[('crypto', word)] += 1
 
-    # Full crypto names
     text_lower = text.lower()
     for name, ticker in CRYPTO_NAMES.items():
         if name in text_lower:
@@ -166,6 +174,8 @@ def fetch_subreddit(subreddit, limit=100):
                         'selftext': d.get('selftext', ''),
                         'score': d.get('score', 0),
                         'num_comments': d.get('num_comments', 0),
+                        'subreddit': subreddit,
+                        'permalink': 'https://reddit.com' + d.get('permalink', ''),
                     })
             time.sleep(1.5)
         except Exception as e:
@@ -176,6 +186,7 @@ def fetch_subreddit(subreddit, limit=100):
 def scrape_all():
     logger.info("Starting Reddit scrape...")
     all_mentions = Counter()
+    ticker_posts = defaultdict(list)
 
     for subreddit in SUBREDDITS:
         posts = fetch_subreddit(subreddit)
@@ -183,14 +194,19 @@ def scrape_all():
         for post in posts:
             text = post['title'] + ' ' + post['selftext']
             mentions = extract_mentions(text)
-            # Weight by post score (popular posts count more)
             weight = max(1, min(5, 1 + post['score'] // 1000))
             for key, count in mentions.items():
                 all_mentions[key] += count * weight
+                ticker_posts[key[1]].append({
+                    'title': post['title'][:250],
+                    'subreddit': post['subreddit'],
+                    'score': post['score'],
+                    'url': post['permalink'],
+                })
 
-    # Save to DB
     conn = sqlite3.connect(DB_PATH)
     now = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+
     for (asset_type, ticker), count in all_mentions.items():
         if asset_type == 'stock':
             full_name = STOCK_TICKERS.get(ticker, ticker)
@@ -200,9 +216,49 @@ def scrape_all():
             'INSERT INTO mentions (ticker, asset_type, full_name, count, scraped_at) VALUES (?,?,?,?,?)',
             (ticker, asset_type, full_name, count, now)
         )
+
+    # Delete old posts and save fresh top 5 per ticker
+    cutoff = (datetime.utcnow() - timedelta(hours=48)).strftime('%Y-%m-%d %H:%M:%S')
+    conn.execute('DELETE FROM top_posts WHERE scraped_at < ?', (cutoff,))
+
+    for ticker, posts in ticker_posts.items():
+        seen_titles = set()
+        unique_posts = []
+        for p in sorted(posts, key=lambda x: x['score'], reverse=True):
+            if p['title'] not in seen_titles:
+                seen_titles.add(p['title'])
+                unique_posts.append(p)
+            if len(unique_posts) >= 5:
+                break
+        for p in unique_posts:
+            conn.execute(
+                'INSERT INTO top_posts (ticker, title, subreddit, score, url, scraped_at) VALUES (?,?,?,?,?,?)',
+                (ticker, p['title'], p['subreddit'], p['score'], p['url'], now)
+            )
+
     conn.commit()
     conn.close()
     logger.info(f"Scrape done. {len(all_mentions)} assets tracked.")
+
+
+def get_post_details(ticker):
+    try:
+        init_db()
+        conn = sqlite3.connect(DB_PATH)
+        cutoff = (datetime.utcnow() - timedelta(hours=24)).strftime('%Y-%m-%d %H:%M:%S')
+        cur = conn.execute('''
+            SELECT title, subreddit, score, url
+            FROM top_posts
+            WHERE ticker = ? AND scraped_at >= ?
+            ORDER BY score DESC
+            LIMIT 5
+        ''', (ticker.upper(), cutoff))
+        posts = [{'title': r[0], 'subreddit': r[1], 'score': r[2], 'url': r[3]} for r in cur]
+        conn.close()
+        return posts
+    except Exception as e:
+        logger.error(f"Error getting post details: {e}")
+        return []
 
 
 def get_trending(limit=30):
@@ -212,7 +268,6 @@ def get_trending(limit=30):
     cutoff_24h = (now - timedelta(hours=24)).strftime('%Y-%m-%d %H:%M:%S')
     cutoff_48h = (now - timedelta(hours=48)).strftime('%Y-%m-%d %H:%M:%S')
 
-    # Last 24h
     cur = conn.execute('''
         SELECT ticker, asset_type, full_name, SUM(count) as total
         FROM mentions
@@ -223,7 +278,6 @@ def get_trending(limit=30):
     ''', (cutoff_24h, limit))
     current = {row[0]: {'ticker': row[0], 'type': row[1], 'name': row[2], 'mentions': row[3]} for row in cur}
 
-    # Previous 24h (24-48h ago)
     cur = conn.execute('''
         SELECT ticker, SUM(count) as total
         FROM mentions
