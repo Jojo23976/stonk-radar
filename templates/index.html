@@ -47,20 +47,113 @@
       50% { opacity: 0.3; }
     }
 
-    .meta {
-      font-size: 0.8rem;
-      color: #8b949e;
-    }
+    .meta { font-size: 0.8rem; color: #8b949e; }
 
-    .container {
-      max-width: 1200px;
+    .layout {
+      display: flex;
+      max-width: 1400px;
       margin: 0 auto;
       padding: 24px 32px;
+      gap: 24px;
     }
+
+    .main-col { flex: 1; min-width: 0; }
+
+    .side-panel {
+      width: 0;
+      overflow: hidden;
+      transition: width 0.3s ease;
+      flex-shrink: 0;
+    }
+
+    .side-panel.open { width: 380px; }
+
+    .side-panel-inner {
+      width: 380px;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 20px;
+      position: sticky;
+      top: 24px;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      gap: 12px;
+    }
+
+    .panel-ticker {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #58a6ff;
+      font-family: monospace;
+    }
+
+    .panel-name { font-size: 0.85rem; color: #8b949e; margin-top: 2px; }
+
+    .panel-close {
+      background: none;
+      border: none;
+      color: #8b949e;
+      cursor: pointer;
+      font-size: 1.2rem;
+      padding: 4px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .panel-close:hover { color: #e6edf3; }
+
+    .panel-subtitle {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #8b949e;
+      margin-bottom: 12px;
+    }
+
+    .post-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .post-card {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 12px 14px;
+      transition: border-color 0.15s;
+      text-decoration: none;
+      display: block;
+    }
+
+    .post-card:hover { border-color: #58a6ff; }
+
+    .post-title {
+      font-size: 0.85rem;
+      color: #e6edf3;
+      line-height: 1.4;
+      margin-bottom: 8px;
+    }
+
+    .post-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.75rem;
+    }
+
+    .post-sub { color: #58a6ff; font-weight: 600; }
+    .post-score { color: #3fb950; }
+    .post-arrow { color: #8b949e; font-size: 0.7rem; margin-left: auto; }
+
+    .panel-loading { text-align: center; padding: 30px; color: #8b949e; font-size: 0.85rem; }
+    .panel-empty { text-align: center; padding: 30px; color: #8b949e; font-size: 0.85rem; }
 
     .stats-row {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
       gap: 16px;
       margin-bottom: 28px;
     }
@@ -80,17 +173,9 @@
       margin-bottom: 6px;
     }
 
-    .stat-card .value {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: #e6edf3;
-    }
+    .stat-card .value { font-size: 1.5rem; font-weight: 700; color: #e6edf3; }
 
-    .filters {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
+    .filters { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
 
     .filter-btn {
       padding: 6px 16px;
@@ -109,9 +194,7 @@
       border-color: #58a6ff;
     }
 
-    .filter-btn.active {
-      color: #58a6ff;
-    }
+    .filter-btn.active { color: #58a6ff; }
 
     .chart-container {
       background: #161b22;
@@ -129,9 +212,7 @@
       letter-spacing: 0.05em;
     }
 
-    .chart-wrapper {
-      height: 200px;
-    }
+    .chart-wrapper { height: 200px; }
 
     .table-container {
       background: #161b22;
@@ -140,14 +221,8 @@
       overflow: hidden;
     }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    thead tr {
-      border-bottom: 1px solid #30363d;
-    }
+    table { width: 100%; border-collapse: collapse; }
+    thead tr { border-bottom: 1px solid #30363d; }
 
     thead th {
       padding: 12px 16px;
@@ -162,38 +237,17 @@
     tbody tr {
       border-bottom: 1px solid #21262d;
       transition: background 0.1s;
+      cursor: pointer;
     }
 
-    tbody tr:last-child {
-      border-bottom: none;
-    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #1c2128; }
+    tbody tr.active-row { background: #1c2128; border-left: 3px solid #58a6ff; }
+    tbody td { padding: 12px 16px; font-size: 0.9rem; }
 
-    tbody tr:hover {
-      background: #1c2128;
-    }
-
-    tbody td {
-      padding: 12px 16px;
-      font-size: 0.9rem;
-    }
-
-    .rank {
-      color: #8b949e;
-      font-size: 0.8rem;
-      width: 40px;
-    }
-
-    .ticker {
-      font-weight: 700;
-      font-size: 1rem;
-      color: #58a6ff;
-      font-family: monospace;
-    }
-
-    .name {
-      color: #8b949e;
-      font-size: 0.85rem;
-    }
+    .rank { color: #8b949e; font-size: 0.8rem; width: 40px; }
+    .ticker { font-weight: 700; font-size: 1rem; color: #58a6ff; font-family: monospace; }
+    .name { color: #8b949e; font-size: 0.85rem; }
 
     .badge {
       display: inline-block;
@@ -217,16 +271,8 @@
       border: 1px solid rgba(210, 153, 34, 0.3);
     }
 
-    .mentions {
-      font-weight: 600;
-      color: #e6edf3;
-    }
-
-    .bar-wrapper {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
+    .mentions { font-weight: 600; color: #e6edf3; }
+    .bar-wrapper { display: flex; align-items: center; gap: 8px; }
 
     .bar-bg {
       flex: 1;
@@ -236,30 +282,16 @@
       min-width: 80px;
     }
 
-    .bar-fill {
-      height: 100%;
-      border-radius: 3px;
-      background: #58a6ff;
-      transition: width 0.5s ease;
-    }
+    .bar-fill { height: 100%; border-radius: 3px; background: #58a6ff; transition: width 0.5s ease; }
 
-    .trend {
-      font-size: 0.85rem;
-      font-weight: 600;
-      white-space: nowrap;
-    }
-
+    .trend { font-size: 0.85rem; font-weight: 600; white-space: nowrap; }
     .trend-up { color: #3fb950; }
     .trend-down { color: #f85149; }
     .trend-neutral { color: #8b949e; }
 
-    .trend-icon { font-size: 0.9rem; }
+    .click-hint { font-size: 0.75rem; color: #8b949e; margin-bottom: 8px; }
 
-    .loading {
-      text-align: center;
-      padding: 60px;
-      color: #8b949e;
-    }
+    .loading { text-align: center; padding: 60px; color: #8b949e; }
 
     .loading .spinner {
       width: 32px;
@@ -271,9 +303,7 @@
       margin: 0 auto 16px;
     }
 
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
     .error-box {
       background: rgba(248, 81, 73, 0.1);
@@ -296,89 +326,101 @@
       transition: all 0.15s;
     }
 
-    .refresh-btn:hover {
-      background: #30363d;
-      color: #e6edf3;
-    }
+    .refresh-btn:hover { background: #30363d; color: #e6edf3; }
 
-    @media (max-width: 768px) {
-      header { padding: 12px 16px; }
-      .container { padding: 16px; }
-      .col-bar, .col-prev { display: none; }
-      thead th:nth-child(5), tbody td:nth-child(5) { display: none; }
+    @media (max-width: 900px) {
+      .layout { flex-direction: column-reverse; padding: 16px; }
+      .side-panel.open { width: 100%; overflow: visible; }
+      .side-panel-inner { width: 100%; position: static; }
+      .col-bar { display: none; }
     }
   </style>
 </head>
 <body>
 
 <header>
-  <h1>
-    <span class="dot"></span>
-    Reddit Sentiment Tracker
-  </h1>
+  <h1><span class="dot"></span>Reddit Sentiment Tracker</h1>
   <div class="meta" id="last-updated">Wird geladen...</div>
 </header>
 
-<div class="container">
+<div class="layout">
+  <div class="main-col">
 
-  <div class="error-box" id="error-box">
-    Fehler beim Laden der Daten. Bitte Seite neu laden.
+    <div class="error-box" id="error-box">Fehler beim Laden der Daten. Bitte Seite neu laden.</div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="label">Assets getrackt</div>
+        <div class="value" id="stat-count">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Top Aktie heute</div>
+        <div class="value" id="stat-top-stock" style="font-size:1.1rem">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Top Krypto heute</div>
+        <div class="value" id="stat-top-crypto" style="font-size:1.1rem">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Quellen</div>
+        <div class="value" style="font-size:1rem;color:#8b949e">11 Subreddits</div>
+      </div>
+    </div>
+
+    <div class="chart-container">
+      <h2>Top 10 Erwähnungen (letzte 24h)</h2>
+      <div class="chart-wrapper"><canvas id="mentionsChart"></canvas></div>
+    </div>
+
+    <div class="filters">
+      <button class="filter-btn active" onclick="setFilter('all', this)">Alle</button>
+      <button class="filter-btn" onclick="setFilter('stock', this)">Aktien</button>
+      <button class="filter-btn" onclick="setFilter('crypto', this)">Krypto</button>
+      <button class="filter-btn" onclick="setFilter('up', this)">↑ Trending up</button>
+      <div style="margin-left:auto">
+        <button class="refresh-btn" onclick="loadData()">↻ Neu laden</button>
+      </div>
+    </div>
+
+    <div class="click-hint">👆 Auf eine Zeile klicken um die Top Reddit-Posts zu sehen</div>
+
+    <div class="table-container">
+      <div class="loading" id="loading">
+        <div class="spinner"></div>
+        Daten werden geladen...
+      </div>
+      <table id="main-table" style="display:none">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Ticker</th>
+            <th>Typ</th>
+            <th>Erwähnungen (24h)</th>
+            <th class="col-bar">Anteil</th>
+            <th>Trend vs. gestern</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+
   </div>
 
-  <div class="stats-row">
-    <div class="stat-card">
-      <div class="label">Assets getrackt</div>
-      <div class="value" id="stat-count">—</div>
+  <!-- Side Panel -->
+  <div class="side-panel" id="side-panel">
+    <div class="side-panel-inner">
+      <div class="panel-header">
+        <div>
+          <div class="panel-ticker" id="panel-ticker">—</div>
+          <div class="panel-name" id="panel-name"></div>
+        </div>
+        <button class="panel-close" onclick="closePanel()">✕</button>
+      </div>
+      <div class="panel-subtitle">Top Reddit Posts (letzte 24h)</div>
+      <div id="panel-content">
+        <div class="panel-loading">Klicke auf eine Zeile in der Tabelle...</div>
+      </div>
     </div>
-    <div class="stat-card">
-      <div class="label">Top Aktie heute</div>
-      <div class="value" id="stat-top-stock" style="font-size:1.1rem">—</div>
-    </div>
-    <div class="stat-card">
-      <div class="label">Top Krypto heute</div>
-      <div class="value" id="stat-top-crypto" style="font-size:1.1rem">—</div>
-    </div>
-    <div class="stat-card">
-      <div class="label">Quellen</div>
-      <div class="value" style="font-size:1rem; color:#8b949e">11 Subreddits</div>
-    </div>
-  </div>
-
-  <div class="chart-container">
-    <h2>Top 10 Erwähnungen (letzte 24h)</h2>
-    <div class="chart-wrapper">
-      <canvas id="mentionsChart"></canvas>
-    </div>
-  </div>
-
-  <div class="filters">
-    <button class="filter-btn active" onclick="setFilter('all', this)">Alle</button>
-    <button class="filter-btn" onclick="setFilter('stock', this)">Aktien</button>
-    <button class="filter-btn" onclick="setFilter('crypto', this)">Krypto</button>
-    <button class="filter-btn" onclick="setFilter('up', this)">↑ Trending up</button>
-    <div style="margin-left:auto">
-      <button class="refresh-btn" onclick="loadData()">↻ Neu laden</button>
-    </div>
-  </div>
-
-  <div class="table-container">
-    <div class="loading" id="loading">
-      <div class="spinner"></div>
-      Daten werden geladen...
-    </div>
-    <table id="main-table" style="display:none">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Ticker</th>
-          <th>Typ</th>
-          <th>Erwähnungen (24h)</th>
-          <th class="col-bar">Anteil</th>
-          <th>Trend vs. gestern</th>
-        </tr>
-      </thead>
-      <tbody id="table-body"></tbody>
-    </table>
   </div>
 
 </div>
@@ -387,6 +429,7 @@
   let allData = [];
   let currentFilter = 'all';
   let chart = null;
+  let activeRow = null;
 
   function setFilter(filter, btn) {
     currentFilter = filter;
@@ -401,16 +444,54 @@
   }
 
   function trendHTML(item) {
-    if (item.trend === 'up') {
-      return `<span class="trend trend-up">▲ +${item.change_pct}%</span>`;
-    } else if (item.trend === 'down') {
-      return `<span class="trend trend-down">▼ ${item.change_pct}%</span>`;
-    } else {
-      if (item.prev_mentions === 0) {
-        return `<span class="trend trend-neutral">— Neu</span>`;
+    if (item.trend === 'up') return `<span class="trend trend-up">▲ +${item.change_pct}%</span>`;
+    if (item.trend === 'down') return `<span class="trend trend-down">▼ ${item.change_pct}%</span>`;
+    if (item.prev_mentions === 0) return `<span class="trend trend-neutral">— Neu</span>`;
+    return `<span class="trend trend-neutral">→ ${item.change_pct > 0 ? '+' : ''}${item.change_pct}%</span>`;
+  }
+
+  function escapeHtml(text) {
+    return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  async function openPanel(ticker, name) {
+    const panel = document.getElementById('side-panel');
+    panel.classList.add('open');
+    document.getElementById('panel-ticker').textContent = ticker;
+    document.getElementById('panel-name').textContent = name;
+    document.getElementById('panel-content').innerHTML =
+      '<div class="panel-loading"><div style="width:20px;height:20px;border:2px solid #30363d;border-top-color:#58a6ff;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 10px"></div>Lädt Posts...</div>';
+
+    try {
+      const resp = await fetch(`/api/details/${ticker}`);
+      const data = await resp.json();
+
+      if (!data.posts || data.posts.length === 0) {
+        document.getElementById('panel-content').innerHTML =
+          '<div class="panel-empty">Noch keine Posts gespeichert.<br><br>Beim nächsten stündlichen Scrape werden Posts geladen.</div>';
+        return;
       }
-      return `<span class="trend trend-neutral">→ ${item.change_pct > 0 ? '+' : ''}${item.change_pct}%</span>`;
+
+      const html = data.posts.map(p => `
+        <a class="post-card" href="${p.url}" target="_blank" rel="noopener">
+          <div class="post-title">${escapeHtml(p.title)}</div>
+          <div class="post-meta">
+            <span class="post-sub">r/${p.subreddit}</span>
+            <span class="post-score">▲ ${formatNumber(p.score)}</span>
+            <span class="post-arrow">↗ öffnen</span>
+          </div>
+        </a>
+      `).join('');
+
+      document.getElementById('panel-content').innerHTML = `<div class="post-list">${html}</div>`;
+    } catch (e) {
+      document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Fehler beim Laden.</div>';
     }
+  }
+
+  function closePanel() {
+    document.getElementById('side-panel').classList.remove('open');
+    if (activeRow) { activeRow.classList.remove('active-row'); activeRow = null; }
   }
 
   function renderTable(data) {
@@ -436,63 +517,49 @@
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td class="rank">${i + 1}</td>
-        <td>
-          <div class="ticker">${item.ticker}</div>
-          <div class="name">${item.name}</div>
-        </td>
+        <td><div class="ticker">${item.ticker}</div><div class="name">${item.name}</div></td>
         <td><span class="badge ${badgeClass}">${badgeLabel}</span></td>
         <td><span class="mentions">${formatNumber(item.mentions)}</span></td>
         <td class="col-bar">
-          <div class="bar-wrapper">
-            <div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div>
-          </div>
+          <div class="bar-wrapper"><div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div></div>
         </td>
         <td>${trendHTML(item)}</td>
       `;
+
+      tr.addEventListener('click', () => {
+        if (activeRow) activeRow.classList.remove('active-row');
+        tr.classList.add('active-row');
+        activeRow = tr;
+        openPanel(item.ticker, item.name);
+      });
+
       tbody.appendChild(tr);
     });
   }
 
   function renderChart(data) {
     const top10 = data.slice(0, 10);
-    const labels = top10.map(d => d.ticker);
-    const values = top10.map(d => d.mentions);
-    const colors = top10.map(d => d.type === 'stock' ? '#58a6ff' : '#e3b341');
-
     if (chart) chart.destroy();
-
     const ctx = document.getElementById('mentionsChart').getContext('2d');
     chart = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels,
+        labels: top10.map(d => d.ticker),
         datasets: [{
-          data: values,
-          backgroundColor: colors,
-          borderRadius: 4,
-          borderSkipped: false,
+          data: top10.map(d => d.mentions),
+          backgroundColor: top10.map(d => d.type === 'stock' ? '#58a6ff' : '#e3b341'),
+          borderRadius: 4, borderSkipped: false,
         }]
       },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
+        responsive: true, maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: (ctx) => ` ${ctx.raw} Erwähnungen`,
-            }
-          }
+          tooltip: { callbacks: { label: (ctx) => ` ${ctx.raw} Erwähnungen` } }
         },
         scales: {
-          x: {
-            grid: { color: '#21262d' },
-            ticks: { color: '#8b949e', font: { size: 11 } },
-          },
-          y: {
-            grid: { color: '#21262d' },
-            ticks: { color: '#8b949e', font: { size: 11 } },
-          }
+          x: { grid: { color: '#21262d' }, ticks: { color: '#8b949e', font: { size: 11 } } },
+          y: { grid: { color: '#21262d' }, ticks: { color: '#8b949e', font: { size: 11 } } }
         }
       }
     });
@@ -500,15 +567,12 @@
 
   function updateStats(data) {
     document.getElementById('stat-count').textContent = data.count;
-
     const topStock = data.assets.find(d => d.type === 'stock');
     const topCrypto = data.assets.find(d => d.type === 'crypto');
-
     document.getElementById('stat-top-stock').textContent =
       topStock ? `${topStock.ticker} (${formatNumber(topStock.mentions)})` : '—';
     document.getElementById('stat-top-crypto').textContent =
       topCrypto ? `${topCrypto.ticker} (${formatNumber(topCrypto.mentions)})` : '—';
-
     if (data.last_scraped) {
       const d = new Date(data.last_scraped + 'Z');
       document.getElementById('last-updated').textContent =
@@ -520,27 +584,22 @@
     document.getElementById('loading').style.display = 'block';
     document.getElementById('main-table').style.display = 'none';
     document.getElementById('error-box').style.display = 'none';
-
     try {
       const resp = await fetch('/api/trending');
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       const data = await resp.json();
-
       allData = data.assets;
       updateStats(data);
       renderChart(allData);
       renderTable(allData);
-
       document.getElementById('loading').style.display = 'none';
       document.getElementById('main-table').style.display = 'table';
     } catch (e) {
       document.getElementById('loading').style.display = 'none';
       document.getElementById('error-box').style.display = 'block';
-      console.error(e);
     }
   }
 
-  // Auto-refresh every 10 minutes
   loadData();
   setInterval(loadData, 10 * 60 * 1000);
 </script>
