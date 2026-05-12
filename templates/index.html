@@ -7,332 +7,106 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0d1117; color: #e6edf3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; min-height: 100vh; }
 
-    body {
-      background: #0d1117;
-      color: #e6edf3;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      min-height: 100vh;
-    }
-
-    header {
-      background: #161b22;
-      border-bottom: 1px solid #30363d;
-      padding: 16px 32px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    header h1 {
-      font-size: 1.3rem;
-      font-weight: 600;
-      color: #58a6ff;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    header h1 span.dot {
-      display: inline-block;
-      width: 10px;
-      height: 10px;
-      background: #3fb950;
-      border-radius: 50%;
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
-    }
-
+    header { background: #161b22; border-bottom: 1px solid #30363d; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; }
+    header h1 { font-size: 1.3rem; font-weight: 600; color: #58a6ff; display: flex; align-items: center; gap: 10px; }
+    header h1 span.dot { display: inline-block; width: 10px; height: 10px; background: #3fb950; border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
     .meta { font-size: 0.8rem; color: #8b949e; }
 
-    .layout {
-      display: flex;
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 24px 32px;
-      gap: 24px;
-    }
-
+    .layout { display: flex; max-width: 1500px; margin: 0 auto; padding: 24px 32px; gap: 24px; }
     .main-col { flex: 1; min-width: 0; }
 
-    .side-panel {
-      width: 0;
-      overflow: hidden;
-      transition: width 0.3s ease;
-      flex-shrink: 0;
-    }
-
+    .side-panel { width: 0; overflow: hidden; transition: width 0.3s ease; flex-shrink: 0; }
     .side-panel.open { width: 380px; }
+    .side-panel-inner { width: 380px; background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; position: sticky; top: 24px; }
 
-    .side-panel-inner {
-      width: 380px;
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 8px;
-      padding: 20px;
-      position: sticky;
-      top: 24px;
-    }
-
-    .panel-header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      margin-bottom: 16px;
-      gap: 12px;
-    }
-
-    .panel-ticker {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: #58a6ff;
-      font-family: monospace;
-    }
-
+    .panel-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8px; gap: 12px; }
+    .panel-ticker { font-size: 1.5rem; font-weight: 700; color: #58a6ff; font-family: monospace; }
     .panel-name { font-size: 0.85rem; color: #8b949e; margin-top: 2px; }
-
-    .panel-close {
-      background: none;
-      border: none;
-      color: #8b949e;
-      cursor: pointer;
-      font-size: 1.2rem;
-      padding: 4px;
-      line-height: 1;
-      flex-shrink: 0;
-    }
-
+    .panel-price { font-size: 1.1rem; font-weight: 600; color: #e6edf3; margin-top: 4px; }
+    .panel-price-change { font-size: 0.85rem; font-weight: 600; margin-top: 2px; }
+    .panel-close { background: none; border: none; color: #8b949e; cursor: pointer; font-size: 1.2rem; padding: 4px; line-height: 1; flex-shrink: 0; }
     .panel-close:hover { color: #e6edf3; }
-
-    .panel-subtitle {
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: #8b949e;
-      margin-bottom: 12px;
-    }
+    .panel-divider { border: none; border-top: 1px solid #30363d; margin: 14px 0; }
+    .panel-subtitle { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #8b949e; margin-bottom: 12px; }
 
     .post-list { display: flex; flex-direction: column; gap: 10px; }
-
-    .post-card {
-      background: #0d1117;
-      border: 1px solid #30363d;
-      border-radius: 6px;
-      padding: 12px 14px;
-      transition: border-color 0.15s;
-      text-decoration: none;
-      display: block;
-    }
-
+    .post-card { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 12px 14px; transition: border-color 0.15s; text-decoration: none; display: block; }
     .post-card:hover { border-color: #58a6ff; }
-
-    .post-title {
-      font-size: 0.85rem;
-      color: #e6edf3;
-      line-height: 1.4;
-      margin-bottom: 8px;
-    }
-
-    .post-meta {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 0.75rem;
-    }
-
+    .post-title { font-size: 0.85rem; color: #e6edf3; line-height: 1.4; margin-bottom: 8px; }
+    .post-meta { display: flex; align-items: center; gap: 10px; font-size: 0.75rem; }
     .post-sub { color: #58a6ff; font-weight: 600; }
     .post-score { color: #3fb950; }
     .post-arrow { color: #8b949e; font-size: 0.7rem; margin-left: auto; }
+    .panel-loading, .panel-empty { text-align: center; padding: 30px; color: #8b949e; font-size: 0.85rem; }
 
-    .panel-loading { text-align: center; padding: 30px; color: #8b949e; font-size: 0.85rem; }
-    .panel-empty { text-align: center; padding: 30px; color: #8b949e; font-size: 0.85rem; }
+    .sources-row { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .source-chip { display: flex; align-items: center; gap: 6px; background: #161b22; border: 1px solid #30363d; border-radius: 20px; padding: 5px 12px; font-size: 0.75rem; color: #8b949e; }
+    .source-chip .dot { width: 7px; height: 7px; border-radius: 50%; background: #3fb950; }
 
-    .stats-row {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 16px;
-      margin-bottom: 28px;
-    }
-
-    .stat-card {
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 8px;
-      padding: 16px 20px;
-    }
-
-    .stat-card .label {
-      font-size: 0.75rem;
-      color: #8b949e;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 6px;
-    }
-
-    .stat-card .value { font-size: 1.5rem; font-weight: 700; color: #e6edf3; }
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px 20px; }
+    .stat-card .label { font-size: 0.75rem; color: #8b949e; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+    .stat-card .value { font-size: 1.4rem; font-weight: 700; color: #e6edf3; }
 
     .filters { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
-
-    .filter-btn {
-      padding: 6px 16px;
-      border-radius: 20px;
-      border: 1px solid #30363d;
-      background: transparent;
-      color: #8b949e;
-      cursor: pointer;
-      font-size: 0.85rem;
-      transition: all 0.15s;
-    }
-
-    .filter-btn.active, .filter-btn:hover {
-      background: #21262d;
-      color: #e6edf3;
-      border-color: #58a6ff;
-    }
-
+    .filter-btn { padding: 6px 16px; border-radius: 20px; border: 1px solid #30363d; background: transparent; color: #8b949e; cursor: pointer; font-size: 0.85rem; transition: all 0.15s; }
+    .filter-btn.active, .filter-btn:hover { background: #21262d; color: #e6edf3; border-color: #58a6ff; }
     .filter-btn.active { color: #58a6ff; }
 
-    .chart-container {
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 8px;
-      padding: 20px;
-      margin-bottom: 24px;
-    }
-
-    .chart-container h2 {
-      font-size: 0.9rem;
-      color: #8b949e;
-      margin-bottom: 16px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
+    .chart-container { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; margin-bottom: 24px; }
+    .chart-container h2 { font-size: 0.9rem; color: #8b949e; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.05em; }
     .chart-wrapper { height: 200px; }
 
-    .table-container {
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 8px;
-      overflow: hidden;
-    }
-
+    .table-container { background: #161b22; border: 1px solid #30363d; border-radius: 8px; overflow: hidden; }
     table { width: 100%; border-collapse: collapse; }
     thead tr { border-bottom: 1px solid #30363d; }
-
-    thead th {
-      padding: 12px 16px;
-      text-align: left;
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: #8b949e;
-      font-weight: 600;
-    }
-
-    tbody tr {
-      border-bottom: 1px solid #21262d;
-      transition: background 0.1s;
-      cursor: pointer;
-    }
-
+    thead th { padding: 11px 14px; text-align: left; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: #8b949e; font-weight: 600; }
+    tbody tr { border-bottom: 1px solid #21262d; transition: background 0.1s; cursor: pointer; }
     tbody tr:last-child { border-bottom: none; }
     tbody tr:hover { background: #1c2128; }
     tbody tr.active-row { background: #1c2128; border-left: 3px solid #58a6ff; }
-    tbody td { padding: 12px 16px; font-size: 0.9rem; }
+    tbody td { padding: 11px 14px; font-size: 0.88rem; }
 
-    .rank { color: #8b949e; font-size: 0.8rem; width: 40px; }
-    .ticker { font-weight: 700; font-size: 1rem; color: #58a6ff; font-family: monospace; }
-    .name { color: #8b949e; font-size: 0.85rem; }
+    .rank { color: #8b949e; font-size: 0.8rem; width: 36px; }
+    .ticker { font-weight: 700; font-size: 0.95rem; color: #58a6ff; font-family: monospace; }
+    .name { color: #8b949e; font-size: 0.8rem; margin-top: 1px; }
 
-    .badge {
-      display: inline-block;
-      padding: 2px 10px;
-      border-radius: 20px;
-      font-size: 0.72rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    .badge-stock {
-      background: rgba(88, 166, 255, 0.15);
-      color: #58a6ff;
-      border: 1px solid rgba(88, 166, 255, 0.3);
-    }
-
-    .badge-crypto {
-      background: rgba(210, 153, 34, 0.15);
-      color: #e3b341;
-      border: 1px solid rgba(210, 153, 34, 0.3);
-    }
+    .badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+    .badge-stock { background: rgba(88,166,255,0.15); color: #58a6ff; border: 1px solid rgba(88,166,255,0.3); }
+    .badge-crypto { background: rgba(210,153,34,0.15); color: #e3b341; border: 1px solid rgba(210,153,34,0.3); }
 
     .mentions { font-weight: 600; color: #e6edf3; }
+    .price-val { font-weight: 600; color: #e6edf3; font-family: monospace; font-size: 0.85rem; }
+    .price-up { color: #3fb950; font-size: 0.8rem; font-weight: 600; }
+    .price-down { color: #f85149; font-size: 0.8rem; font-weight: 600; }
+    .price-na { color: #8b949e; font-size: 0.8rem; }
+
     .bar-wrapper { display: flex; align-items: center; gap: 8px; }
-
-    .bar-bg {
-      flex: 1;
-      height: 6px;
-      background: #21262d;
-      border-radius: 3px;
-      min-width: 80px;
-    }
-
+    .bar-bg { flex: 1; height: 6px; background: #21262d; border-radius: 3px; min-width: 60px; }
     .bar-fill { height: 100%; border-radius: 3px; background: #58a6ff; transition: width 0.5s ease; }
 
-    .trend { font-size: 0.85rem; font-weight: 600; white-space: nowrap; }
+    .trend { font-size: 0.82rem; font-weight: 600; white-space: nowrap; }
     .trend-up { color: #3fb950; }
     .trend-down { color: #f85149; }
     .trend-neutral { color: #8b949e; }
 
     .click-hint { font-size: 0.75rem; color: #8b949e; margin-bottom: 8px; }
-
     .loading { text-align: center; padding: 60px; color: #8b949e; }
-
-    .loading .spinner {
-      width: 32px;
-      height: 32px;
-      border: 3px solid #30363d;
-      border-top-color: #58a6ff;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin: 0 auto 16px;
-    }
-
+    .loading .spinner { width: 32px; height: 32px; border: 3px solid #30363d; border-top-color: #58a6ff; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    .error-box {
-      background: rgba(248, 81, 73, 0.1);
-      border: 1px solid rgba(248, 81, 73, 0.3);
-      border-radius: 8px;
-      padding: 16px 20px;
-      color: #f85149;
-      margin-bottom: 20px;
-      display: none;
-    }
-
-    .refresh-btn {
-      padding: 6px 14px;
-      background: #21262d;
-      border: 1px solid #30363d;
-      border-radius: 6px;
-      color: #8b949e;
-      cursor: pointer;
-      font-size: 0.8rem;
-      transition: all 0.15s;
-    }
-
+    .error-box { background: rgba(248,81,73,0.1); border: 1px solid rgba(248,81,73,0.3); border-radius: 8px; padding: 16px 20px; color: #f85149; margin-bottom: 20px; display: none; }
+    .refresh-btn { padding: 6px 14px; background: #21262d; border: 1px solid #30363d; border-radius: 6px; color: #8b949e; cursor: pointer; font-size: 0.8rem; transition: all 0.15s; }
     .refresh-btn:hover { background: #30363d; color: #e6edf3; }
 
-    @media (max-width: 900px) {
+    @media (max-width: 1000px) {
       .layout { flex-direction: column-reverse; padding: 16px; }
       .side-panel.open { width: 100%; overflow: visible; }
       .side-panel-inner { width: 100%; position: static; }
-      .col-bar { display: none; }
+      .col-bar, .col-price { display: none; }
     }
   </style>
 </head>
@@ -348,6 +122,13 @@
 
     <div class="error-box" id="error-box">Fehler beim Laden der Daten. Bitte Seite neu laden.</div>
 
+    <div class="sources-row">
+      <div class="source-chip"><span class="dot"></span> Reddit (11 Subreddits)</div>
+      <div class="source-chip"><span class="dot"></span> ApeWisdom</div>
+      <div class="source-chip"><span class="dot"></span> StockTwits</div>
+      <div class="source-chip"><span class="dot"></span> Preise via Yahoo Finance</div>
+    </div>
+
     <div class="stats-row">
       <div class="stat-card">
         <div class="label">Assets getrackt</div>
@@ -355,15 +136,15 @@
       </div>
       <div class="stat-card">
         <div class="label">Top Aktie heute</div>
-        <div class="value" id="stat-top-stock" style="font-size:1.1rem">—</div>
+        <div class="value" id="stat-top-stock" style="font-size:1rem">—</div>
       </div>
       <div class="stat-card">
         <div class="label">Top Krypto heute</div>
-        <div class="value" id="stat-top-crypto" style="font-size:1.1rem">—</div>
+        <div class="value" id="stat-top-crypto" style="font-size:1rem">—</div>
       </div>
       <div class="stat-card">
         <div class="label">Quellen</div>
-        <div class="value" style="font-size:1rem;color:#8b949e">11 Subreddits</div>
+        <div class="value" style="font-size:0.9rem;color:#8b949e">Reddit + ApeWisdom + StockTwits</div>
       </div>
     </div>
 
@@ -382,7 +163,7 @@
       </div>
     </div>
 
-    <div class="click-hint">👆 Auf eine Zeile klicken um die Top Reddit-Posts zu sehen</div>
+    <div class="click-hint">👆 Auf eine Zeile klicken um Reddit-Posts und Details zu sehen</div>
 
     <div class="table-container">
       <div class="loading" id="loading">
@@ -396,6 +177,8 @@
             <th>Ticker</th>
             <th>Typ</th>
             <th>Erwähnungen (24h)</th>
+            <th class="col-price">Preis</th>
+            <th class="col-price">Heute</th>
             <th class="col-bar">Anteil</th>
             <th>Trend vs. gestern</th>
           </tr>
@@ -413,9 +196,12 @@
         <div>
           <div class="panel-ticker" id="panel-ticker">—</div>
           <div class="panel-name" id="panel-name"></div>
+          <div class="panel-price" id="panel-price"></div>
+          <div class="panel-price-change" id="panel-price-change"></div>
         </div>
         <button class="panel-close" onclick="closePanel()">✕</button>
       </div>
+      <hr class="panel-divider">
       <div class="panel-subtitle">Top Reddit Posts (letzte 24h)</div>
       <div id="panel-content">
         <div class="panel-loading">Klicke auf eine Zeile in der Tabelle...</div>
@@ -450,25 +236,51 @@
     return `<span class="trend trend-neutral">→ ${item.change_pct > 0 ? '+' : ''}${item.change_pct}%</span>`;
   }
 
+  function priceChangeHTML(change) {
+    if (change === null || change === undefined) return '<span class="price-na">—</span>';
+    const sign = change >= 0 ? '+' : '';
+    const cls = change >= 0 ? 'price-up' : 'price-down';
+    const arrow = change >= 0 ? '▲' : '▼';
+    return `<span class="${cls}">${arrow} ${sign}${change.toFixed(2)}%</span>`;
+  }
+
   function escapeHtml(text) {
     return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  async function openPanel(ticker, name) {
+  async function openPanel(item) {
     const panel = document.getElementById('side-panel');
     panel.classList.add('open');
-    document.getElementById('panel-ticker').textContent = ticker;
-    document.getElementById('panel-name').textContent = name;
+    document.getElementById('panel-ticker').textContent = item.ticker;
+    document.getElementById('panel-name').textContent = item.name;
+
+    if (item.price) {
+      document.getElementById('panel-price').textContent = item.price;
+      const change = item.price_change;
+      if (change !== null && change !== undefined) {
+        const sign = change >= 0 ? '+' : '';
+        const color = change >= 0 ? '#3fb950' : '#f85149';
+        const arrow = change >= 0 ? '▲' : '▼';
+        document.getElementById('panel-price-change').innerHTML =
+          `<span style="color:${color}">${arrow} ${sign}${change.toFixed(2)}% heute</span>`;
+      } else {
+        document.getElementById('panel-price-change').textContent = '';
+      }
+    } else {
+      document.getElementById('panel-price').textContent = 'Kurs lädt...';
+      document.getElementById('panel-price-change').textContent = '';
+    }
+
     document.getElementById('panel-content').innerHTML =
       '<div class="panel-loading"><div style="width:20px;height:20px;border:2px solid #30363d;border-top-color:#58a6ff;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 10px"></div>Lädt Posts...</div>';
 
     try {
-      const resp = await fetch(`/api/details/${ticker}`);
+      const resp = await fetch(`/api/details/${item.ticker}`);
       const data = await resp.json();
 
       if (!data.posts || data.posts.length === 0) {
         document.getElementById('panel-content').innerHTML =
-          '<div class="panel-empty">Noch keine Posts gespeichert.<br><br>Beim nächsten stündlichen Scrape werden Posts geladen.</div>';
+          '<div class="panel-empty">Noch keine Posts gespeichert.<br><br>Beim nächsten Scrape verfügbar.</div>';
         return;
       }
 
@@ -505,7 +317,7 @@
     tbody.innerHTML = '';
 
     if (filtered.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:#8b949e">Keine Daten für diesen Filter</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:#8b949e">Keine Daten für diesen Filter</td></tr>';
       return;
     }
 
@@ -513,6 +325,7 @@
       const pct = Math.round((item.mentions / maxMentions) * 100);
       const badgeClass = item.type === 'stock' ? 'badge-stock' : 'badge-crypto';
       const badgeLabel = item.type === 'stock' ? 'Aktie' : 'Krypto';
+      const priceStr = item.price ? `<span class="price-val">${item.price}</span>` : '<span class="price-na">—</span>';
 
       const tr = document.createElement('tr');
       tr.innerHTML = `
@@ -520,9 +333,9 @@
         <td><div class="ticker">${item.ticker}</div><div class="name">${item.name}</div></td>
         <td><span class="badge ${badgeClass}">${badgeLabel}</span></td>
         <td><span class="mentions">${formatNumber(item.mentions)}</span></td>
-        <td class="col-bar">
-          <div class="bar-wrapper"><div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div></div>
-        </td>
+        <td class="col-price">${priceStr}</td>
+        <td class="col-price">${priceChangeHTML(item.price_change)}</td>
+        <td class="col-bar"><div class="bar-wrapper"><div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div></div></td>
         <td>${trendHTML(item)}</td>
       `;
 
@@ -530,7 +343,7 @@
         if (activeRow) activeRow.classList.remove('active-row');
         tr.classList.add('active-row');
         activeRow = tr;
-        openPanel(item.ticker, item.name);
+        openPanel(item);
       });
 
       tbody.appendChild(tr);
@@ -570,9 +383,9 @@
     const topStock = data.assets.find(d => d.type === 'stock');
     const topCrypto = data.assets.find(d => d.type === 'crypto');
     document.getElementById('stat-top-stock').textContent =
-      topStock ? `${topStock.ticker} (${formatNumber(topStock.mentions)})` : '—';
+      topStock ? `${topStock.ticker} ${topStock.price ? '· ' + topStock.price : ''}` : '—';
     document.getElementById('stat-top-crypto').textContent =
-      topCrypto ? `${topCrypto.ticker} (${formatNumber(topCrypto.mentions)})` : '—';
+      topCrypto ? `${topCrypto.ticker} ${topCrypto.price ? '· ' + topCrypto.price : ''}` : '—';
     if (data.last_scraped) {
       const d = new Date(data.last_scraped + 'Z');
       document.getElementById('last-updated').textContent =
