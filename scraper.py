@@ -264,11 +264,12 @@ def fetch_prices(ticker_type_map):
     if not ticker_type_map:
         return prices
 
-    stock_tickers = [t for t, typ in ticker_type_map.items() if typ == 'stock']
-    crypto_tickers = [t for t, typ in ticker_type_map.items() if typ == 'crypto']
+    # Limit to top 15 stocks + top 10 cryptos to avoid rate limits
+    stock_tickers = [t for t, typ in ticker_type_map.items() if typ == 'stock'][:15]
+    crypto_tickers = [t for t, typ in ticker_type_map.items() if typ == 'crypto'][:10]
 
     if stock_tickers:
-        for batch in chunks(stock_tickers, 10):
+        for batch in chunks(stock_tickers, 5):
             try:
                 syms = ' '.join(batch)
                 data = yf.download(syms, period='2d', interval='1d', progress=False, auto_adjust=True)
@@ -286,10 +287,10 @@ def fetch_prices(ticker_type_map):
                         pass
             except Exception as e:
                 logger.warning(f"yfinance stocks batch error: {e}")
-            time.sleep(3)
+            time.sleep(10)
 
     if crypto_tickers:
-        for batch in chunks(crypto_tickers, 10):
+        for batch in chunks(crypto_tickers, 5):
             try:
                 yf_syms = [t + '-USD' for t in batch]
                 syms = ' '.join(yf_syms)
@@ -309,7 +310,7 @@ def fetch_prices(ticker_type_map):
                         pass
             except Exception as e:
                 logger.warning(f"yfinance crypto batch error: {e}")
-            time.sleep(3)
+            time.sleep(10)
 
     logger.info(f"Prices fetched: {len(prices)} tickers")
     return prices
