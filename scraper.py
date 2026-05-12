@@ -1,9 +1,10 @@
 import requests
 import re
-import sqlite3
-import time
 import os
+import time
 import logging
+import psycopg2
+import psycopg2.extras
 import yfinance as yf
 from datetime import datetime, timedelta
 from collections import Counter, defaultdict
@@ -94,33 +95,39 @@ IGNORE_WORDS = {
     'SMH', 'TIL', 'DAE', 'CMV', 'ELI', 'EDIT', 'UPDATE', 'OP',
 }
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sentiment.db')
+
+def get_db():
+    url = os.environ.get('DATABASE_URL', '')
+    if url.startswith('postgres://'):
+        url = url.replace('postgres://', 'postgresql://', 1)
+    return psycopg2.connect(url)
 
 
 def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.execute('''
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute('''
         CREATE TABLE IF NOT EXISTS mentions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             ticker TEXT NOT NULL,
             asset_type TEXT NOT NULL,
             full_name TEXT NOT NULL,
             count INTEGER NOT NULL,
-            scraped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            scraped_at TIMESTAMP DEFAULT NOW()
         )
     ''')
-    conn.execute('''
+    cur.execute('''
         CREATE TABLE IF NOT EXISTS top_posts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             ticker TEXT NOT NULL,
             title TEXT NOT NULL,
             subreddit TEXT NOT NULL,
             score INTEGER NOT NULL,
             url TEXT NOT NULL,
-            scraped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            scraped_at TIMESTAMP DEFAULT NOW()
         )
     ''')
-    conn.execute('''
+    cur.execute('''
         CREATE TABLE IF NOT EXISTS prices (
             ticker TEXT PRIMARY KEY,
             asset_type TEXT,
@@ -129,9 +136,10 @@ def init_db():
             updated_at TIMESTAMP
         )
     ''')
-    conn.execute('CREATE INDEX IF NOT EXISTS idx_ticker_time ON mentions(ticker, scraped_at)')
-    conn.execute('CREATE INDEX IF NOT EXISTS idx_posts_ticker ON top_posts(ticker, scraped_at)')
+    cur.execute('CREATE INDEX IF NOT EXISTS idx_ticker_time ON mentions(ticker, scraped_at)')
+    cur.execute('CREATE INDEX IF NOT EXISTS idx_posts_ticker ON top_posts(ticker, scraped_at)')
     conn.commit()
+    cur.close()
     conn.close()
 
 
@@ -190,7 +198,6 @@ def fetch_subreddit(subreddit, limit=100):
 
 
 def fetch_apewisdom():
-    """Fetch trending tickers from ApeWisdom (aggregated Reddit data)"""
     try:
         url = 'https://apewisdom.io/api/v1.0/filter/all-subreddits/page/1'
         headers = {'User-Agent': 'SentimentTracker/1.0'}
@@ -203,7 +210,7 @@ def fetch_apewisdom():
                 mentions = item.get('mentions', 0)
                 if ticker and mentions:
                     results[ticker] = int(mentions)
-            logger.info(f"ApeWisdom: {len(results)} tickers fetched")
+            logger.info(f"ApeWisdom: {len(results)} tickers")
             return results
     except Exception as e:
         logger.warning(f"ApeWisdom error: {e}")
@@ -211,7 +218,6 @@ def fetch_apewisdom():
 
 
 def fetch_stocktwits(tickers):
-    """Fetch StockTwits mention counts and sentiment for top tickers"""
     headers = {'User-Agent': 'SentimentTracker/1.0'}
     results = {}
     for ticker in tickers[:12]:
@@ -227,15 +233,11 @@ def fetch_stocktwits(tickers):
                 bearish = sum(1 for m in messages
                               if m.get('entities', {}).get('sentiment') and
                               m['entities']['sentiment'].get('basic') == 'Bearish')
-                results[ticker] = {
-                    'count': len(messages),
-                    'bullish': bullish,
-                    'bearish': bearish,
-                }
+                results[ticker] = {'count': len(messages), 'bullish': bullish, 'bearish': bearish}
             time.sleep(1.2)
         except Exception as e:
             logger.warning(f"StockTwits error for {ticker}: {e}")
-    logger.info(f"StockTwits: {len(results)} tickers fetched")
+    logger.info(f"StockTwits: {len(results)} tickers")
     return results
 
 
@@ -253,7 +255,6 @@ def format_price(price):
 
 
 def fetch_prices(ticker_type_map):
-    """Fetch current prices and daily change using yfinance"""
     prices = {}
     if not ticker_type_map:
         return prices
@@ -261,12 +262,10 @@ def fetch_prices(ticker_type_map):
     stock_tickers = [t for t, typ in ticker_type_map.items() if typ == 'stock']
     crypto_tickers = [t for t, typ in ticker_type_map.items() if typ == 'crypto']
 
-    # Fetch stocks
     if stock_tickers:
         try:
             syms = ' '.join(stock_tickers)
-            data = yf.download(syms, period='2d', interval='1d',
-                               progress=False, auto_adjust=True)
+            data = yf.download(syms, period='2d', interval='1d', progress=False, auto_adjust=True)
             close = data['Close']
             for ticker in stock_tickers:
                 try:
@@ -282,13 +281,11 @@ def fetch_prices(ticker_type_map):
         except Exception as e:
             logger.warning(f"yfinance stocks error: {e}")
 
-    # Fetch crypto
     if crypto_tickers:
         try:
             yf_syms = [t + '-USD' for t in crypto_tickers]
             syms = ' '.join(yf_syms)
-            data = yf.download(syms, period='2d', interval='1d',
-                               progress=False, auto_adjust=True)
+            data = yf.download(syms, period='2d', interval='1d', progress=False, auto_adjust=True)
             close = data['Close']
             for ticker in crypto_tickers:
                 try:
@@ -315,7 +312,6 @@ def scrape_all():
     ticker_posts = defaultdict(list)
     ticker_types = {}
 
-    # 1. Reddit scraping
     for subreddit in SUBREDDITS:
         posts = fetch_subreddit(subreddit)
         logger.info(f"r/{subreddit}: {len(posts)} posts")
@@ -333,7 +329,6 @@ def scrape_all():
                     'url': post['permalink'],
                 })
 
-    # 2. ApeWisdom (extra Reddit aggregation)
     ape_data = fetch_apewisdom()
     for ticker, count in ape_data.items():
         if ticker in STOCK_TICKERS:
@@ -343,26 +338,26 @@ def scrape_all():
             all_mentions[('crypto', ticker)] += count // 3
             ticker_types[ticker] = 'crypto'
 
-    # 3. StockTwits (for top stock tickers)
     top_stocks = [k[1] for k in all_mentions if k[0] == 'stock'][:12]
     st_data = fetch_stocktwits(top_stocks)
     for ticker, data in st_data.items():
         if ticker in STOCK_TICKERS:
             all_mentions[('stock', ticker)] += data['count']
 
-    # Save mentions to DB
-    conn = sqlite3.connect(DB_PATH)
-    now = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+    conn = get_db()
+    cur = conn.cursor()
+    now = datetime.utcnow()
+
     for (asset_type, ticker), count in all_mentions.items():
         full_name = STOCK_TICKERS.get(ticker, CRYPTO_ASSETS.get(ticker, ticker))
-        conn.execute(
-            'INSERT INTO mentions (ticker, asset_type, full_name, count, scraped_at) VALUES (?,?,?,?,?)',
+        cur.execute(
+            'INSERT INTO mentions (ticker, asset_type, full_name, count, scraped_at) VALUES (%s,%s,%s,%s,%s)',
             (ticker, asset_type, full_name, count, now)
         )
 
-    # Save top posts
-    cutoff = (datetime.utcnow() - timedelta(hours=48)).strftime('%Y-%m-%d %H:%M:%S')
-    conn.execute('DELETE FROM top_posts WHERE scraped_at < ?', (cutoff,))
+    cutoff = now - timedelta(hours=48)
+    cur.execute('DELETE FROM top_posts WHERE scraped_at < %s', (cutoff,))
+
     for ticker, posts in ticker_posts.items():
         seen = set()
         unique = []
@@ -373,42 +368,92 @@ def scrape_all():
             if len(unique) >= 5:
                 break
         for p in unique:
-            conn.execute(
-                'INSERT INTO top_posts (ticker, title, subreddit, score, url, scraped_at) VALUES (?,?,?,?,?,?)',
+            cur.execute(
+                'INSERT INTO top_posts (ticker, title, subreddit, score, url, scraped_at) VALUES (%s,%s,%s,%s,%s,%s)',
                 (ticker, p['title'], p['subreddit'], p['score'], p['url'], now)
             )
 
     conn.commit()
+    cur.close()
     conn.close()
 
-    # 4. Fetch prices for all tracked tickers
     prices = fetch_prices(ticker_types)
     if prices:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db()
+        cur = conn.cursor()
         for ticker, pdata in prices.items():
-            conn.execute('''
-                INSERT OR REPLACE INTO prices (ticker, asset_type, price, change_pct, updated_at)
-                VALUES (?, ?, ?, ?, ?)
-            ''', (ticker, ticker_types.get(ticker, 'stock'),
-                  pdata['price'], pdata['change'], now))
+            cur.execute('''
+                INSERT INTO prices (ticker, asset_type, price, change_pct, updated_at)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (ticker) DO UPDATE SET
+                    asset_type = EXCLUDED.asset_type,
+                    price = EXCLUDED.price,
+                    change_pct = EXCLUDED.change_pct,
+                    updated_at = EXCLUDED.updated_at
+            ''', (ticker, ticker_types.get(ticker, 'stock'), pdata['price'], pdata['change'], now))
         conn.commit()
+        cur.close()
         conn.close()
 
     logger.info(f"Scrape complete. {len(all_mentions)} assets, {len(prices)} prices.")
 
 
-def get_post_details(ticker):
+def update_prices_only():
     try:
         init_db()
-        conn = sqlite3.connect(DB_PATH)
-        cutoff = (datetime.utcnow() - timedelta(hours=24)).strftime('%Y-%m-%d %H:%M:%S')
-        cur = conn.execute('''
-            SELECT title, subreddit, score, url
-            FROM top_posts
-            WHERE ticker = ? AND scraped_at >= ?
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute('SELECT DISTINCT ticker, asset_type FROM prices')
+        rows = cur.fetchall()
+
+        if not rows:
+            cutoff = datetime.utcnow() - timedelta(hours=24)
+            cur.execute('SELECT DISTINCT ticker, asset_type FROM mentions WHERE scraped_at >= %s', (cutoff,))
+            rows = cur.fetchall()
+
+        cur.close()
+        conn.close()
+
+        if not rows:
+            logger.info("No tickers to update prices for yet.")
+            return
+
+        ticker_type_map = {row[0]: row[1] for row in rows}
+        prices = fetch_prices(ticker_type_map)
+
+        if prices:
+            conn = get_db()
+            cur = conn.cursor()
+            now = datetime.utcnow()
+            for ticker, pdata in prices.items():
+                cur.execute('''
+                    INSERT INTO prices (ticker, asset_type, price, change_pct, updated_at)
+                    VALUES (%s, %s, %s, %s, %s)
+                    ON CONFLICT (ticker) DO UPDATE SET
+                        price = EXCLUDED.price,
+                        change_pct = EXCLUDED.change_pct,
+                        updated_at = EXCLUDED.updated_at
+                ''', (ticker, ticker_type_map.get(ticker, 'stock'), pdata['price'], pdata['change'], now))
+            conn.commit()
+            cur.close()
+            conn.close()
+            logger.info(f"Price update done: {len(prices)} tickers.")
+    except Exception as e:
+        logger.error(f"Price update error: {e}")
+
+
+def get_post_details(ticker):
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        cutoff = datetime.utcnow() - timedelta(hours=24)
+        cur.execute('''
+            SELECT title, subreddit, score, url FROM top_posts
+            WHERE ticker = %s AND scraped_at >= %s
             ORDER BY score DESC LIMIT 5
         ''', (ticker.upper(), cutoff))
-        posts = [{'title': r[0], 'subreddit': r[1], 'score': r[2], 'url': r[3]} for r in cur]
+        posts = [{'title': r[0], 'subreddit': r[1], 'score': r[2], 'url': r[3]} for r in cur.fetchall()]
+        cur.close()
         conn.close()
         return posts
     except Exception as e:
@@ -418,36 +463,36 @@ def get_post_details(ticker):
 
 def get_trending(limit=30):
     init_db()
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db()
+    cur = conn.cursor()
     now = datetime.utcnow()
-    cutoff_24h = (now - timedelta(hours=24)).strftime('%Y-%m-%d %H:%M:%S')
-    cutoff_48h = (now - timedelta(hours=48)).strftime('%Y-%m-%d %H:%M:%S')
+    cutoff_24h = now - timedelta(hours=24)
+    cutoff_48h = now - timedelta(hours=48)
 
-    cur = conn.execute('''
+    cur.execute('''
         SELECT ticker, asset_type, full_name, SUM(count) as total
-        FROM mentions WHERE scraped_at >= ?
-        GROUP BY ticker ORDER BY total DESC LIMIT ?
+        FROM mentions WHERE scraped_at >= %s
+        GROUP BY ticker, asset_type, full_name
+        ORDER BY total DESC LIMIT %s
     ''', (cutoff_24h, limit))
-    current = {row[0]: {'ticker': row[0], 'type': row[1], 'name': row[2], 'mentions': row[3]} for row in cur}
+    current = {row[0]: {'ticker': row[0], 'type': row[1], 'name': row[2], 'mentions': row[3]}
+               for row in cur.fetchall()}
 
-    cur = conn.execute('''
+    cur.execute('''
         SELECT ticker, SUM(count) as total FROM mentions
-        WHERE scraped_at >= ? AND scraped_at < ?
+        WHERE scraped_at >= %s AND scraped_at < %s
         GROUP BY ticker
     ''', (cutoff_48h, cutoff_24h))
-    previous = {row[0]: row[1] for row in cur}
+    previous = {row[0]: row[1] for row in cur.fetchall()}
 
-    # Get prices
     tickers = list(current.keys())
     price_data = {}
     if tickers:
-        placeholders = ','.join(['?' for _ in tickers])
-        cur = conn.execute(
-            f'SELECT ticker, price, change_pct FROM prices WHERE ticker IN ({placeholders})',
-            tickers
-        )
-        price_data = {r[0]: {'price': r[1], 'change': r[2]} for r in cur}
+        placeholders = ','.join(['%s'] * len(tickers))
+        cur.execute(f'SELECT ticker, price, change_pct FROM prices WHERE ticker IN ({placeholders})', tickers)
+        price_data = {r[0]: {'price': r[1], 'change': r[2]} for r in cur.fetchall()}
 
+    cur.close()
     conn.close()
 
     results = []
@@ -478,11 +523,12 @@ def get_trending(limit=30):
 
 def get_last_scraped():
     try:
-        conn = sqlite3.connect(DB_PATH)
-        cur = conn.execute('SELECT MAX(scraped_at) FROM mentions')
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute('SELECT MAX(scraped_at) FROM mentions')
         row = cur.fetchone()
+        cur.close()
         conn.close()
-        return row[0] if row and row[0] else None
+        return str(row[0]) if row and row[0] else None
     except Exception:
         return None
-
