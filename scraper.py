@@ -254,6 +254,11 @@ def format_price(price):
         return f"${price:.6f}"
 
 
+def chunks(lst, n):
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
+
+
 def fetch_prices(ticker_type_map):
     prices = {}
     if not ticker_type_map:
@@ -263,44 +268,48 @@ def fetch_prices(ticker_type_map):
     crypto_tickers = [t for t, typ in ticker_type_map.items() if typ == 'crypto']
 
     if stock_tickers:
-        try:
-            syms = ' '.join(stock_tickers)
-            data = yf.download(syms, period='2d', interval='1d', progress=False, auto_adjust=True)
-            close = data['Close']
-            for ticker in stock_tickers:
-                try:
-                    series = close[ticker] if len(stock_tickers) > 1 else close
-                    series = series.dropna()
-                    if len(series) >= 2:
-                        p = float(series.iloc[-1])
-                        prev = float(series.iloc[-2])
-                        change = round(((p - prev) / prev) * 100, 2)
-                        prices[ticker] = {'price': p, 'price_str': format_price(p), 'change': change}
-                except Exception:
-                    pass
-        except Exception as e:
-            logger.warning(f"yfinance stocks error: {e}")
+        for batch in chunks(stock_tickers, 10):
+            try:
+                syms = ' '.join(batch)
+                data = yf.download(syms, period='2d', interval='1d', progress=False, auto_adjust=True)
+                close = data['Close']
+                for ticker in batch:
+                    try:
+                        series = close[ticker] if len(batch) > 1 else close
+                        series = series.dropna()
+                        if len(series) >= 2:
+                            p = float(series.iloc[-1])
+                            prev = float(series.iloc[-2])
+                            change = round(((p - prev) / prev) * 100, 2)
+                            prices[ticker] = {'price': p, 'price_str': format_price(p), 'change': change}
+                    except Exception:
+                        pass
+            except Exception as e:
+                logger.warning(f"yfinance stocks batch error: {e}")
+            time.sleep(3)
 
     if crypto_tickers:
-        try:
-            yf_syms = [t + '-USD' for t in crypto_tickers]
-            syms = ' '.join(yf_syms)
-            data = yf.download(syms, period='2d', interval='1d', progress=False, auto_adjust=True)
-            close = data['Close']
-            for ticker in crypto_tickers:
-                try:
-                    yf_sym = ticker + '-USD'
-                    series = close[yf_sym] if len(crypto_tickers) > 1 else close
-                    series = series.dropna()
-                    if len(series) >= 2:
-                        p = float(series.iloc[-1])
-                        prev = float(series.iloc[-2])
-                        change = round(((p - prev) / prev) * 100, 2)
-                        prices[ticker] = {'price': p, 'price_str': format_price(p), 'change': change}
-                except Exception:
-                    pass
-        except Exception as e:
-            logger.warning(f"yfinance crypto error: {e}")
+        for batch in chunks(crypto_tickers, 10):
+            try:
+                yf_syms = [t + '-USD' for t in batch]
+                syms = ' '.join(yf_syms)
+                data = yf.download(syms, period='2d', interval='1d', progress=False, auto_adjust=True)
+                close = data['Close']
+                for ticker in batch:
+                    try:
+                        yf_sym = ticker + '-USD'
+                        series = close[yf_sym] if len(batch) > 1 else close
+                        series = series.dropna()
+                        if len(series) >= 2:
+                            p = float(series.iloc[-1])
+                            prev = float(series.iloc[-2])
+                            change = round(((p - prev) / prev) * 100, 2)
+                            prices[ticker] = {'price': p, 'price_str': format_price(p), 'change': change}
+                    except Exception:
+                        pass
+            except Exception as e:
+                logger.warning(f"yfinance crypto batch error: {e}")
+            time.sleep(3)
 
     logger.info(f"Prices fetched: {len(prices)} tickers")
     return prices
