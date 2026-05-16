@@ -358,6 +358,10 @@ def scrape_all():
     cur = conn.cursor()
     now = datetime.utcnow()
 
+    # Delete mentions older than 7 days
+    cutoff_7d = now - timedelta(days=7)
+    cur.execute('DELETE FROM mentions WHERE scraped_at < %s', (cutoff_7d,))
+
     for (asset_type, ticker), count in all_mentions.items():
         full_name = STOCK_TICKERS.get(ticker, CRYPTO_ASSETS.get(ticker, ticker))
         cur.execute(
@@ -476,24 +480,41 @@ def get_trending(limit=30):
     conn = get_db()
     cur = conn.cursor()
     now = datetime.utcnow()
-    cutoff_24h = now - timedelta(hours=24)
-    cutoff_48h = now - timedelta(hours=48)
 
+    # Get the timestamp of the most recent scrape
+    cur.execute('SELECT MAX(scraped_at) FROM mentions')
+    row = cur.fetchone()
+    if not row or not row[0]:
+        cur.close()
+        conn.close()
+        return []
+    latest_ts = row[0]
+
+    # Get the timestamp of the scrape closest to 24h ago (for trend comparison)
+    cutoff_20h = now - timedelta(hours=20)
+    cur.execute('SELECT MAX(scraped_at) FROM mentions WHERE scraped_at < %s', (cutoff_20h,))
+    row = cur.fetchone()
+    prev_ts = row[0] if row and row[0] else None
+
+    # Current: only the latest scrape
     cur.execute('''
         SELECT ticker, asset_type, full_name, SUM(count) as total
-        FROM mentions WHERE scraped_at >= %s
+        FROM mentions WHERE scraped_at = %s
         GROUP BY ticker, asset_type, full_name
         ORDER BY total DESC LIMIT %s
-    ''', (cutoff_24h, limit))
+    ''', (latest_ts, limit))
     current = {row[0]: {'ticker': row[0], 'type': row[1], 'name': row[2], 'mentions': row[3]}
                for row in cur.fetchall()}
 
-    cur.execute('''
-        SELECT ticker, SUM(count) as total FROM mentions
-        WHERE scraped_at >= %s AND scraped_at < %s
-        GROUP BY ticker
-    ''', (cutoff_48h, cutoff_24h))
-    previous = {row[0]: row[1] for row in cur.fetchall()}
+    # Previous: the scrape from ~24h ago (for trend)
+    previous = {}
+    if prev_ts:
+        cur.execute('''
+            SELECT ticker, SUM(count) as total FROM mentions
+            WHERE scraped_at = %s
+            GROUP BY ticker
+        ''', (prev_ts,))
+        previous = {row[0]: row[1] for row in cur.fetchall()}
 
     tickers = list(current.keys())
     price_data = {}
